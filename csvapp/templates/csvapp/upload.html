@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Upload — {{ league_name }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold: #c9a84c; --gold-light: #e8c97a; --cream: #f5ead8;
+    --red: #c0392b; --bg: #0a1e12; --card-bg: #0d2518;
+    --border: rgba(201,168,76,0.25); --green-light: #2d6a4f;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'IBM Plex Mono',monospace; background:var(--bg); color:var(--cream);
+    min-height:100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(45,106,79,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(201,168,76,0.08) 0%, transparent 40%);
+  }
+
+  .top-bar {
+    border-bottom:1px solid var(--border); padding:14px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .top-bar a { color:var(--gold); text-decoration:none; font-size:11px; letter-spacing:2px; }
+  .top-bar .site-name { font-family:'Playfair Display',serif; font-size:1.1rem; color:var(--cream); }
+
+  .page-header { text-align:center; padding:50px 20px 30px; }
+  .page-header h2 {
+    font-family:'Playfair Display',serif; font-size:2.2rem; color:var(--cream);
+    font-weight:900;
+  }
+  .page-header h2 span { color:var(--gold); }
+  .page-header p { margin-top:10px; font-size:11px; letter-spacing:2px; color:rgba(245,234,216,0.35); }
+
+  /* ── TABS ── */
+  .tabs {
+    display:flex; justify-content:center; gap:0; max-width:600px;
+    margin:0 auto 30px; border:1px solid var(--border); border-radius:4px; overflow:hidden;
+  }
+  .tab-btn {
+    flex:1; padding:14px 20px; background:transparent; border:none;
+    color:rgba(245,234,216,0.45); font-family:'IBM Plex Mono',monospace;
+    font-size:11px; letter-spacing:2px; text-transform:uppercase; cursor:pointer;
+    transition:all .2s; border-right:1px solid var(--border);
+  }
+  .tab-btn:last-child { border-right:none; }
+  .tab-btn:hover { color:var(--gold); background:rgba(201,168,76,0.05); }
+  .tab-btn.active { background:rgba(201,168,76,0.12); color:var(--gold); }
+
+  /* ── FORM CARD ── */
+  .form-wrap { max-width:600px; margin:0 auto; padding:0 20px 80px; }
+  .form-card {
+    background:var(--card-bg); border:1px solid var(--border);
+    border-radius:4px; padding:32px;
+  }
+  .form-card.hidden { display:none; }
+
+  .field { margin-bottom:22px; }
+  label {
+    display:block; font-size:10px; letter-spacing:3px; text-transform:uppercase;
+    color:var(--gold); opacity:.75; margin-bottom:8px;
+  }
+  input[type=text], input[type=number], select, textarea {
+    width:100%; background:rgba(10,30,18,0.8); border:1px solid var(--border);
+    color:var(--cream); font-family:'IBM Plex Mono',monospace; font-size:13px;
+    padding:10px 14px; border-radius:3px; outline:none; transition:border-color .15s;
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus, textarea:focus {
+    border-color:var(--gold);
+  }
+  select option { background:#0d2518; }
+
+  /* File drop zone */
+  .drop-zone {
+    border:2px dashed var(--border); border-radius:4px; padding:32px;
+    text-align:center; cursor:pointer; transition:all .2s; position:relative;
+  }
+  .drop-zone:hover, .drop-zone.dragover { border-color:var(--gold); background:rgba(201,168,76,0.05); }
+  .drop-zone input[type=file] { position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+  .drop-zone-icon { font-size:2rem; margin-bottom:10px; }
+  .drop-zone-text { font-size:12px; color:rgba(245,234,216,0.45); letter-spacing:1px; }
+  .drop-zone-text strong { color:var(--gold); display:block; margin-bottom:4px; font-size:13px; }
+  .drop-zone-filename { margin-top:10px; font-size:11px; color:var(--gold); }
+
+  /* Checkbox */
+  .check-field { display:flex; align-items:center; gap:10px; margin-bottom:22px; }
+  .check-field input[type=checkbox] { width:16px; height:16px; accent-color:var(--gold); cursor:pointer; }
+  .check-field label { margin:0; font-size:11px; letter-spacing:1px; opacity:.6; cursor:pointer; }
+
+  /* Submit */
+  .btn-submit {
+    width:100%; padding:14px; background:rgba(201,168,76,0.15);
+    border:1px solid var(--gold); color:var(--gold-light);
+    font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:3px;
+    text-transform:uppercase; cursor:pointer; border-radius:3px; transition:all .2s;
+  }
+  .btn-submit:hover { background:rgba(201,168,76,0.25); }
+
+  .help-text { font-size:10px; color:rgba(245,234,216,0.3); letter-spacing:1px; margin-top:6px; }
+
+  /* Messages */
+  .messages { max-width:600px; margin:0 auto 20px; padding:0 20px; }
+  .msg { padding:11px 15px; border-radius:3px; margin-bottom:8px; font-size:12px; letter-spacing:1px; border:1px solid; }
+  .msg.success { background:rgba(45,106,79,0.2); border-color:rgba(45,106,79,0.5); color:#7ecda0; }
+  .msg.error   { background:rgba(192,57,43,0.15); border-color:rgba(192,57,43,0.4); color:#e07070; }
+  .msg.warning { background:rgba(201,168,76,0.1); border-color:var(--border); color:var(--gold); }
+
+  .section-note {
+    background:rgba(201,168,76,0.07); border:1px solid var(--border);
+    border-radius:3px; padding:12px 16px; margin-bottom:22px;
+    font-size:11px; color:rgba(245,234,216,0.5); line-height:1.7;
+  }
+  .section-note strong { color:var(--gold); }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="{% url 'leaderboard' year=2026 %}">← Back to Standings</a>
+  <span class="site-name">{{ league_name }}</span>
+  <span style="font-size:11px;color:rgba(245,234,216,0.25);">Admin</span>
+</div>
+
+<div class="page-header">
+  <h2>Upload <span>Results</span></h2>
+  <p>Monthly Tournament CSV &nbsp;or&nbsp; Overall Season Stats</p>
+</div>
+
+{% if messages %}
+<div class="messages">
+  {% for message in messages %}
+    <div class="msg {{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab-btn {% if not overall_active %}active{% endif %}" onclick="showTab('monthly')">
+    🃏 Monthly Tournament
+  </button>
+  <button class="tab-btn {% if overall_active %}active{% endif %}" onclick="showTab('overall')">
+    📊 Overall Season Stats
+  </button>
+</div>
+
+<div class="form-wrap">
+
+  <!-- ── MONTHLY TOURNAMENT FORM ── -->
+  <div class="form-card {% if overall_active %}hidden{% endif %}" id="tab-monthly">
+    <div class="section-note">
+      <strong>Monthly Tournament CSV</strong><br>
+      Upload the export from your poker software after each game. Must include
+      <strong>Nickname</strong>, <strong>Points</strong>, and <strong>Hits</strong> (knockouts) columns.
+    </div>
+
+    <form method="post" action="{% url 'upload' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+        <div class="field">
+          <label>Month</label>
+          <select name="month">
+            {% for val, name in form.month.field.choices %}
+              <option value="{{ val }}" {% if form.month.value == val|stringformat:"s" %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field">
+          <label>Year</label>
+          <input type="number" name="year" value="{{ form.year.value|default:2026 }}" min="2020" max="2100">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Tournament CSV File</label>
+        <div class="drop-zone" id="monthly-drop">
+          <input type="file" name="csv_file" accept=".csv" onchange="showFilename(this,'monthly-name')">
+          <div class="drop-zone-icon">📄</div>
+          <div class="drop-zone-text">
+            <strong>Choose CSV or drag & drop</strong>
+            Monthly tournament export from your poker software
+          </div>
+          <div class="drop-zone-filename" id="monthly-name"></div>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Notes (optional)</label>
+        <textarea name="notes" rows="2" placeholder="e.g. Host's house, 16 players..."></textarea>
+      </div>
+
+      <div class="check-field">
+        <input type="checkbox" name="overwrite" id="overwrite-monthly">
+        <label for="overwrite-monthly">Overwrite existing data for this month/year</label>
+      </div>
+
+      <button type="submit" class="btn-submit">⬆ Upload Tournament Results</button>
+    </form>
+  </div>
+
+  <!-- ── OVERALL SEASON STATS FORM ── -->
+  <div class="form-card {% if not overall_active %}hidden{% endif %}" id="tab-overall">
+    <div class="section-note">
+      <strong>Overall / Year-to-Date Stats CSV</strong><br>
+      Upload your cumulative season stats. This powers the <strong>End of Year Prize Pool</strong>,
+      <strong>Games Played</strong>, and <strong>total Knockouts</strong> on the leaderboard.
+      Must include <strong>Name</strong>, <strong>Games Played</strong>, <strong>EOY Pool</strong>,
+      and <strong>Knockouts</strong> columns.
+    </div>
+
+    <form method="post" action="{% url 'upload_overall' %}" enctype="multipart/form-data">
+      {% csrf_token %}
+
+      <div class="field">
+        <label>Season Year</label>
+        <input type="number" name="year" value="{{ upload_overall_form.year.value|default:2026 }}" min="2020" max="2100">
+      </div>
+
+      <div class="field">
+        <label>Overall Stats CSV File</label>
+        <div class="drop-zone" id="overall-drop">
+          <input type="file" name="csv_file" accept=".csv" onchange="showFilename(this,'overall-name')">
+          <div class="drop-zone-icon">📊</div>
+          <div class="drop-zone-text">
+            <strong>Choose CSV or drag & drop</strong>
+            Year-to-date cumulative stats export
+          </div>
+          <div class="drop-zone-filename" id="overall-name"></div>
+        </div>
+      </div>
+
+      <div class="check-field">
+        <input type="checkbox" name="overwrite" id="overwrite-overall">
+        <label for="overwrite-overall">Replace existing overall stats for this year</label>
+      </div>
+
+      <button type="submit" class="btn-submit">⬆ Upload Overall Stats</button>
+    </form>
+  </div>
+
+</div><!-- /form-wrap -->
+
+<script>
+function showTab(tab) {
+  document.getElementById('tab-monthly').classList.toggle('hidden', tab !== 'monthly');
+  document.getElementById('tab-overall').classList.toggle('hidden', tab !== 'overall');
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', (i === 0 && tab === 'monthly') || (i === 1 && tab === 'overall'));
+  });
+}
+
+function showFilename(input, targetId) {
+  const el = document.getElementById(targetId);
+  if (input.files && input.files[0]) {
+    el.textContent = '✓ ' + input.files[0].name;
+  }
+}
+
+// Drag-over visual feedback
+document.querySelectorAll('.drop-zone').forEach(zone => {
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', () => zone.classList.remove('dragover'));
+});
+</script>
+</body>
+</html>

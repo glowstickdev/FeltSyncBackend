@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold:#c9a84c; --gold-light:#e8c97a; --cream:#f5ead8;
+    --red:#c0392b; --bg:#0a1e12; --card-bg:#0d2518;
+    --border:rgba(201,168,76,0.25);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'IBM Plex Mono',monospace; background:var(--bg); color:var(--cream); min-height:100vh; }
+  header { text-align:center; padding:50px 20px 35px; border-bottom:1px solid var(--border); }
+  .tour-label { font-size:10px; letter-spacing:5px; text-transform:uppercase; color:var(--gold); opacity:.7; margin-bottom:8px; }
+  h1 { font-family:'Playfair Display',serif; font-size:clamp(1.6rem,4vw,2.8rem); font-weight:900; color:var(--cream); }
+  h1 span { color:var(--gold); }
+  .nav-bar { display:flex; justify-content:center; align-items:center; gap:10px; padding:13px 20px; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .nav-bar a { color:rgba(245,234,216,0.45); text-decoration:none; font-size:11px; letter-spacing:2px; text-transform:uppercase; padding:5px 12px; border:1px solid transparent; border-radius:2px; transition:all .15s; }
+  .nav-bar a:hover { color:var(--gold); border-color:var(--border); }
+  main { max-width:600px; margin:0 auto; padding:40px 20px 80px; }
+
+  .messages { margin-bottom:20px; }
+  .msg { padding:11px 15px; border-radius:3px; margin-bottom:8px; font-size:12px; letter-spacing:1px; border:1px solid; }
+  .msg.success { background:rgba(45,106,79,0.2); border-color:rgba(45,106,79,0.5); color:#7ecda0; }
+  .msg.error   { background:rgba(192,57,43,0.15); border-color:rgba(192,57,43,0.4); color:#e07070; }
+
+  .section-title { font-family:'Playfair Display',serif; font-size:1.3rem; color:var(--gold); margin-bottom:24px; display:flex; align-items:center; gap:12px; }
+  .section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  .theme-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:32px; }
+  .theme-option {
+    border:2px solid var(--border); border-radius:6px; padding:24px 20px;
+    cursor:pointer; transition:all .2s; text-align:center; position:relative;
+  }
+  .theme-option:hover { border-color:rgba(201,168,76,0.5); }
+  .theme-option.active { border-color:var(--gold); background:rgba(201,168,76,0.08); }
+  .theme-option input[type=radio] { position:absolute; opacity:0; width:0; height:0; }
+  .theme-icon { font-size:2.2rem; margin-bottom:12px; display:block; }
+  .theme-name { font-family:'Playfair Display',serif; font-size:1.1rem; color:var(--cream); margin-bottom:6px; }
+  .theme-desc { font-size:10px; color:rgba(245,234,216,0.45); letter-spacing:1px; line-height:1.6; }
+  .theme-badge {
+    display:inline-block; margin-top:10px; padding:2px 8px; border-radius:2px;
+    font-size:10px; letter-spacing:1px; text-transform:uppercase;
+    background:rgba(201,168,76,0.15); color:var(--gold); border:1px solid rgba(201,168,76,0.3);
+  }
+
+  /* Glass preview card */
+  .theme-option.glass-preview {
+    background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(7,11,20,0.8));
+    border-color: rgba(255,255,255,0.15);
+  }
+  .theme-option.glass-preview:hover { border-color:rgba(201,168,76,0.5); }
+  .theme-option.glass-preview.active { border-color:var(--gold); }
+  .theme-option.glass-preview .theme-desc { color:rgba(238,242,255,0.5); }
+
+  .btn-save {
+    display:block; width:100%; padding:13px; border-radius:4px;
+    background:rgba(201,168,76,0.12); border:1px solid var(--gold);
+    color:var(--gold-light); font-family:'IBM Plex Mono',monospace;
+    font-size:12px; letter-spacing:3px; text-transform:uppercase;
+    cursor:pointer; transition:all .2s;
+  }
+  .btn-save:hover { background:rgba(201,168,76,0.22); }
+
+  footer { text-align:center; padding:26px; border-top:1px solid var(--border); font-size:11px; color:rgba(245,234,216,0.18); letter-spacing:2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="tour-label">{{ league_name }}</div>
+  <h1>Site <span>Settings</span></h1>
+</header>
+<div class="nav-bar">
+  <a href="{% url 'leaderboard' year=2026 %}">← Standings</a>
+  <a href="{% url 'events' %}">Events</a>
+</div>
+
+{% if messages %}
+<div class="messages" style="max-width:600px;margin:20px auto 0;padding:0 20px;">
+  {% for message in messages %}
+    <div class="msg {{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<main>
+  <div class="section-title">Theme</div>
+
+  <form method="post">
+    {% csrf_token %}
+    <div class="theme-grid">
+      {% for value, label in theme_choices %}
+      <label class="theme-option{% if value == 'glass' %} glass-preview{% endif %}{% if settings.theme == value %} active{% endif %}">
+        <input type="radio" name="theme" value="{{ value }}"{% if settings.theme == value %} checked{% endif %}>
+        {% if value == 'default' %}
+          <span class="theme-icon">♠</span>
+          <div class="theme-name">Default</div>
+          <div class="theme-desc">Dark green felt with gold accents. Classic poker aesthetic.</div>
+        {% else %}
+          <span class="theme-icon">✦</span>
+          <div class="theme-name">Glass</div>
+          <div class="theme-desc">Deep navy with frosted glass cards and soft colour gradients.</div>
+        {% endif %}
+        {% if settings.theme == value %}
+          <div class="theme-badge">Active</div>
+        {% endif %}
+      </label>
+      {% endfor %}
+    </div>
+    <button type="submit" class="btn-save">Apply Theme</button>
+  </form>
+</main>
+<footer>♠ {{ league_name }} &nbsp;·&nbsp; 2026 Season ♠</footer>
+
+<script>
+  // Highlight selected option on click
+  document.querySelectorAll('.theme-option').forEach(label => {
+    label.addEventListener('click', () => {
+      document.querySelectorAll('.theme-option').forEach(l => l.classList.remove('active'));
+      label.classList.add('active');
+    });
+  });
+</script>
+</body>
+</html>

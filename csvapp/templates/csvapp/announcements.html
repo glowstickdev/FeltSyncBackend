@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Announcements — {{ league_name }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold:#c9a84c; --gold-light:#e8c97a; --cream:#f5ead8;
+    --red:#c0392b; --bg:#0a1e12; --card-bg:#0d2518; --border:rgba(201,168,76,0.25);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'IBM Plex Mono',monospace; background:var(--bg); color:var(--cream); min-height:100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(45,106,79,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(201,168,76,0.08) 0%, transparent 40%);
+  }
+
+  header {
+    text-align:center; padding:50px 20px 35px;
+    border-bottom:1px solid var(--border); position:relative; overflow:hidden;
+  }
+  header::before {
+    content:'♠ ♥ ♣ ♦ ♠ ♥ ♣ ♦ ♠ ♥ ♣ ♦ ♠ ♥ ♣ ♦ ♠ ♥ ♣ ♦';
+    position:absolute; top:14px; left:0; right:0;
+    font-size:13px; color:rgba(201,168,76,0.15); letter-spacing:8px; white-space:nowrap; overflow:hidden;
+  }
+  .tour-label { font-size:10px; letter-spacing:5px; text-transform:uppercase; color:var(--gold); opacity:.7; margin-bottom:8px; }
+  h1 { font-family:'Playfair Display',serif; font-size:clamp(1.8rem,5vw,3.5rem); font-weight:900; color:var(--cream); }
+  h1 span { color:var(--gold); }
+  .subtitle { margin-top:10px; font-size:11px; letter-spacing:3px; color:rgba(245,234,216,0.35); text-transform:uppercase; }
+
+  /* ── NAV ── */
+  .nav-bar {
+    display:flex; justify-content:center; align-items:center; gap:10px; padding:13px 20px;
+    border-bottom:1px solid var(--border); flex-wrap:wrap;
+  }
+  .nav-bar a {
+    color:rgba(245,234,216,0.45); text-decoration:none; font-size:11px; letter-spacing:2px;
+    text-transform:uppercase; padding:5px 12px; border:1px solid transparent; border-radius:2px; transition:all .15s;
+  }
+  .nav-bar a:hover { color:var(--gold); border-color:var(--border); }
+  .nav-bar a.active { color:var(--gold); border-color:var(--gold); }
+  .nav-bar a.btn-new {
+    color:var(--gold); border-color:var(--gold);
+    background:rgba(201,168,76,0.1);
+  }
+  .nav-bar a.btn-new:hover { background:rgba(201,168,76,0.2); }
+  .nav-sep { color:var(--border); }
+
+  /* ── MESSAGES ── */
+  .messages { max-width:800px; margin:20px auto 0; padding:0 20px; }
+  .msg { padding:11px 15px; border-radius:3px; margin-bottom:8px; font-size:12px; letter-spacing:1px; border:1px solid; }
+  .msg.success { background:rgba(45,106,79,0.2); border-color:rgba(45,106,79,0.5); color:#7ecda0; }
+  .msg.error   { background:rgba(192,57,43,0.15); border-color:rgba(192,57,43,0.4); color:#e07070; }
+
+  /* ── MAIN ── */
+  main { max-width:800px; margin:0 auto; padding:40px 20px 80px; }
+
+  .section-header {
+    display:flex; align-items:center; gap:12px; margin-bottom:24px;
+  }
+  .section-title {
+    font-family:'Playfair Display',serif; font-size:1.4rem; color:var(--gold); white-space:nowrap;
+  }
+  .section-rule { flex:1; height:1px; background:var(--border); }
+
+  /* ── ANNOUNCEMENT CARD ── */
+  .announcement-card {
+    background:var(--card-bg); border:1px solid var(--border);
+    border-radius:4px; padding:28px 30px; margin-bottom:18px;
+    position:relative; transition:border-color .2s;
+  }
+  .announcement-card:hover { border-color:rgba(201,168,76,0.4); }
+  .announcement-card.pinned {
+    border-color:rgba(201,168,76,0.5);
+    background:linear-gradient(135deg, rgba(201,168,76,0.06), var(--card-bg) 60%);
+  }
+  .announcement-card.inactive {
+    opacity:.55; border-style:dashed;
+  }
+
+  .pin-badge {
+    font-size:9px; letter-spacing:2px; text-transform:uppercase;
+    color:var(--gold); background:rgba(201,168,76,0.1);
+    border:1px solid var(--border); border-radius:2px; padding:3px 8px;
+    display:inline-block; margin-bottom:10px;
+  }
+  .draft-badge {
+    font-size:9px; letter-spacing:2px; text-transform:uppercase;
+    color:rgba(245,234,216,0.35); background:rgba(255,255,255,0.04);
+    border:1px solid rgba(245,234,216,0.1); border-radius:2px; padding:3px 8px;
+    display:inline-block; margin-bottom:10px; margin-left:6px;
+  }
+
+  .ann-title {
+    font-family:'Playfair Display',serif; font-size:1.3rem;
+    color:var(--cream); font-weight:700; margin-bottom:8px;
+  }
+  .ann-meta {
+    font-size:10px; letter-spacing:2px; color:rgba(245,234,216,0.3);
+    text-transform:uppercase; margin-bottom:16px;
+  }
+  .ann-body {
+    font-size:13px; color:rgba(245,234,216,0.75); line-height:1.9; white-space:pre-line;
+  }
+
+  /* ── ADMIN CONTROLS ── */
+  .admin-controls {
+    display:flex; gap:10px; margin-top:20px; padding-top:16px;
+    border-top:1px solid rgba(201,168,76,0.1); flex-wrap:wrap;
+  }
+  .btn {
+    font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:2px;
+    text-transform:uppercase; padding:7px 16px; border-radius:3px;
+    cursor:pointer; text-decoration:none; border:1px solid; transition:all .15s;
+    display:inline-block;
+  }
+  .btn-edit { color:var(--gold); border-color:var(--border); background:transparent; }
+  .btn-edit:hover { border-color:var(--gold); background:rgba(201,168,76,0.08); }
+  .btn-delete { color:#e07070; border-color:rgba(192,57,43,0.3); background:transparent; }
+  .btn-delete:hover { border-color:rgba(192,57,43,0.6); background:rgba(192,57,43,0.08); }
+  .btn-toggle {
+    color:rgba(245,234,216,0.4); border-color:rgba(245,234,216,0.1); background:transparent;
+    font-size:10px;
+  }
+  .btn-toggle:hover { color:var(--cream); border-color:var(--border); }
+
+  /* ── EMPTY STATE ── */
+  .empty-state {
+    text-align:center; padding:60px 20px;
+    color:rgba(245,234,216,0.25); font-size:13px; letter-spacing:2px;
+  }
+  .empty-state .icon { font-size:2.5rem; margin-bottom:14px; opacity:.4; display:block; }
+
+  footer { text-align:center; padding:26px; border-top:1px solid var(--border); font-size:11px; color:rgba(245,234,216,0.18); letter-spacing:2px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="tour-label">{{ league_name }}</div>
+  <h1>Club <span>Announcements</span></h1>
+  <p class="subtitle">News & Updates from the Board</p>
+</header>
+
+<div class="nav-bar">
+  <a href="{% url 'leaderboard' year=2026 %}">Standings</a>
+  <span class="nav-sep">|</span>
+  <a href="{% url 'announcements' %}" class="active">Announcements</a>
+  <span class="nav-sep">|</span>
+  <a href="{% url 'events' %}">Events</a>
+  {% if request.user.is_authenticated %}
+  <span class="nav-sep">|</span>
+  <a href="{% url 'announcement_create' %}" class="btn-new">+ New Announcement</a>
+  <span class="nav-sep">|</span>
+  <a href="{% url 'upload' %}">⬆ Upload</a>
+  {% endif %}
+</div>
+
+{% if messages %}
+<div class="messages">
+  {% for message in messages %}
+    <div class="msg {{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<main>
+  <div class="section-header">
+    <span class="section-title">Current Announcements</span>
+    <span class="section-rule"></span>
+  </div>
+
+  {% if announcements %}
+    {% for ann in announcements %}
+    <div class="announcement-card {% if ann.is_pinned %}pinned{% endif %} {% if not ann.is_active %}inactive{% endif %}">
+
+      <div>
+        {% if ann.is_pinned %}<span class="pin-badge">📌 Pinned</span>{% endif %}
+        {% if not ann.is_active %}<span class="draft-badge">Draft — Not Published</span>{% endif %}
+      </div>
+
+      <div class="ann-title">{{ ann.title }}</div>
+      <div class="ann-meta">
+        Posted {{ ann.created_at|date:"F j, Y" }}
+        {% if ann.updated_at != ann.created_at %}· Updated {{ ann.updated_at|date:"F j, Y" }}{% endif %}
+      </div>
+      <div class="ann-body">{{ ann.body }}</div>
+
+      {% if request.user.is_authenticated %}
+      <div class="admin-controls">
+        <a href="{% url 'announcement_edit' pk=ann.pk %}" class="btn btn-edit">✏ Edit</a>
+        <a href="{% url 'announcement_delete' pk=ann.pk %}" class="btn btn-delete">✕ Delete</a>
+        <span class="btn btn-toggle" style="cursor:default;">
+          {% if ann.is_pinned %}📌 Pinned{% else %}📄 Unpinned{% endif %}
+          &nbsp;·&nbsp;
+          {% if ann.is_active %}✓ Published{% else %}○ Draft{% endif %}
+        </span>
+      </div>
+      {% endif %}
+
+    </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state">
+      <span class="icon">📋</span>
+      NO ANNOUNCEMENTS YET
+      {% if request.user.is_authenticated %}
+      <br><br>
+      <a href="{% url 'announcement_create' %}" style="color:var(--gold);text-decoration:none;border-bottom:1px solid rgba(201,168,76,0.3);">+ Create your first announcement</a>
+      {% endif %}
+    </div>
+  {% endif %}
+</main>
+
+<footer>♠ {{ league_name }} &nbsp;·&nbsp; 2026 Season ♠</footer>
+</body>
+</html>

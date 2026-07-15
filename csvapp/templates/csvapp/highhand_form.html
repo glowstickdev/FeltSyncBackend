@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edit High Hand {{ year }} — {{ league_name }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold:#c9a84c; --gold-light:#e8c97a; --cream:#f5ead8;
+    --red:#c0392b; --bg:#0a1e12; --card-bg:#0d2518; --border:rgba(201,168,76,0.25);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'IBM Plex Mono',monospace; background:var(--bg); color:var(--cream); min-height:100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(45,106,79,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(201,168,76,0.08) 0%, transparent 40%);
+  }
+
+  .top-bar {
+    border-bottom:1px solid var(--border); padding:14px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .top-bar a { color:var(--gold); text-decoration:none; font-size:11px; letter-spacing:2px; }
+  .top-bar .site-name { font-family:'Playfair Display',serif; font-size:1.1rem; color:var(--cream); }
+  .top-bar .admin-label { font-size:11px; color:rgba(245,234,216,0.25); letter-spacing:1px; }
+
+  .page-header { text-align:center; padding:50px 20px 30px; }
+  .page-header h2 { font-family:'Playfair Display',serif; font-size:2.2rem; color:var(--cream); font-weight:900; }
+  .page-header h2 span { color:var(--gold); }
+  .page-header p { margin-top:8px; font-size:11px; letter-spacing:2px; color:rgba(245,234,216,0.3); text-transform:uppercase; }
+
+  .messages { max-width:700px; margin:20px auto 0; padding:0 20px; }
+  .msg { padding:11px 15px; border-radius:3px; margin-bottom:8px; font-size:12px; letter-spacing:1px; border:1px solid; }
+  .msg.error { background:rgba(192,57,43,0.15); border-color:rgba(192,57,43,0.4); color:#e07070; }
+
+  .form-wrap { max-width:700px; margin:0 auto; padding:0 20px 80px; }
+
+  /* ── LIVE PREVIEW ── */
+  .preview-box {
+    background:var(--card-bg); border:1px solid var(--border);
+    border-radius:4px; padding:24px; margin-bottom:20px; text-align:center;
+  }
+  .preview-label { font-size:9px; letter-spacing:4px; text-transform:uppercase; color:var(--gold); opacity:.6; margin-bottom:6px; }
+  .preview-hand-type { font-family:'Playfair Display',serif; font-size:1.3rem; color:var(--gold-light); font-weight:700; margin-bottom:4px; }
+  .preview-player { font-size:11px; letter-spacing:2px; color:rgba(245,234,216,0.4); margin-bottom:16px; }
+  .preview-cards { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; }
+
+  /* ── PLAYING CARDS ── */
+  .playing-card {
+    width:52px; height:76px; background:#fff; border-radius:5px;
+    box-shadow:0 3px 8px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3);
+    display:flex; flex-direction:column; justify-content:space-between;
+    padding:4px 5px; font-family:'Playfair Display',serif;
+    position:relative; font-weight:700; transition:transform .15s;
+  }
+  .playing-card.red { color:#c0392b; }
+  .playing-card.black { color:#1a1a2e; }
+  .card-corner-top { display:flex; flex-direction:column; align-items:flex-start; line-height:1; }
+  .card-corner-bottom { display:flex; flex-direction:column; align-items:flex-end; transform:rotate(180deg); line-height:1; }
+  .card-rank { font-size:15px; }
+  .card-suit-corner { font-size:11px; margin-top:-1px; }
+  .card-center-suit { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:22px; line-height:1; }
+
+  /* ── FORM ── */
+  .form-card { background:var(--card-bg); border:1px solid var(--border); border-radius:4px; padding:32px; }
+
+  .field { margin-bottom:22px; }
+  label {
+    display:block; font-size:10px; letter-spacing:3px; text-transform:uppercase;
+    color:var(--gold); opacity:.75; margin-bottom:8px;
+  }
+  input[type=text], input[type=number], select {
+    width:100%; background:rgba(10,30,18,0.8); border:1px solid var(--border);
+    color:var(--cream); font-family:'IBM Plex Mono',monospace; font-size:13px;
+    padding:10px 14px; border-radius:3px; outline:none; transition:border-color .15s;
+    appearance:none; -webkit-appearance:none;
+  }
+  input[type=text]:focus, input[type=number]:focus, select:focus { border-color:var(--gold); }
+
+  .select-wrap { position:relative; }
+  .select-wrap::after {
+    content:'▾'; position:absolute; right:12px; top:50%; transform:translateY(-50%);
+    color:var(--gold); pointer-events:none; font-size:14px;
+  }
+
+  /* Disabled options styling hint */
+  select option:disabled {
+    color: rgba(245,234,216,0.2);
+    background: rgba(10,30,18,0.9);
+  }
+
+  .cards-grid { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; }
+  @media(max-width:500px) { .cards-grid { grid-template-columns:repeat(3,1fr); } }
+  .card-slot label { text-align:center; }
+
+  .help-text { font-size:10px; color:rgba(245,234,216,0.3); letter-spacing:1px; margin-top:6px; }
+  .errorlist { list-style:none; margin-top:6px; }
+  .errorlist li { font-size:11px; color:#e07070; }
+
+  .section-divider {
+    font-size:9px; letter-spacing:4px; text-transform:uppercase;
+    color:var(--gold); opacity:.5; margin:28px 0 18px;
+    display:flex; align-items:center; gap:12px;
+  }
+  .section-divider::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  .btn-submit {
+    width:100%; padding:14px; background:rgba(201,168,76,0.15);
+    border:1px solid var(--gold); color:var(--gold-light);
+    font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:3px;
+    text-transform:uppercase; cursor:pointer; border-radius:3px; transition:all .2s; margin-top:8px;
+  }
+  .btn-submit:hover { background:rgba(201,168,76,0.25); }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="{% url 'leaderboard' year=year %}">← Back to Leaderboard</a>
+  <span class="site-name">{{ league_name }}</span>
+  <span class="admin-label">Admin</span>
+</div>
+
+<div class="page-header">
+  <h2>Edit <span>High Hand</span></h2>
+  <p>{{ year }} Season</p>
+</div>
+
+{% if messages %}
+<div class="messages">
+  {% for message in messages %}
+    <div class="msg {{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="form-wrap">
+
+  <!-- LIVE PREVIEW -->
+  <div class="preview-box">
+    <div class="preview-label">🃏 Live Preview</div>
+    <div class="preview-hand-type" id="preview-hand-type">—</div>
+    <div class="preview-player" id="preview-player">—</div>
+    <div class="preview-cards" id="preview-cards">
+      <div style="color:rgba(245,234,216,0.2);font-size:11px;letter-spacing:2px;">SELECT CARDS BELOW</div>
+    </div>
+  </div>
+
+  <div class="form-card">
+    <form method="post" id="hh-form">
+      {% csrf_token %}
+
+      <div class="field">
+        <label for="id_player_name">Player Name</label>
+        {{ form.player_name }}
+        {% if form.player_name.errors %}<ul class="errorlist">{% for e in form.player_name.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      <div class="field">
+        <label for="id_hand_type">Hand Type</label>
+        <div class="select-wrap">{{ form.hand_type }}</div>
+        {% if form.hand_type.errors %}<ul class="errorlist">{% for e in form.hand_type.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      <div class="section-divider">Five Cards</div>
+
+      <div class="field">
+        <div class="cards-grid">
+          <div class="card-slot">
+            <label for="id_card1">Card 1</label>
+            <div class="select-wrap">{{ form.card1 }}</div>
+          </div>
+          <div class="card-slot">
+            <label for="id_card2">Card 2</label>
+            <div class="select-wrap">{{ form.card2 }}</div>
+          </div>
+          <div class="card-slot">
+            <label for="id_card3">Card 3</label>
+            <div class="select-wrap">{{ form.card3 }}</div>
+          </div>
+          <div class="card-slot">
+            <label for="id_card4">Card 4</label>
+            <div class="select-wrap">{{ form.card4 }}</div>
+          </div>
+          <div class="card-slot">
+            <label for="id_card5">Card 5</label>
+            <div class="select-wrap">{{ form.card5 }}</div>
+          </div>
+        </div>
+        <div class="help-text">Already-chosen cards are greyed out in other slots.</div>
+        {% if form.card1.errors %}<ul class="errorlist">{% for e in form.card1.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      <div class="field">
+        <label for="id_notes">Notes <span style="opacity:.4;font-size:9px;">(optional)</span></label>
+        {{ form.notes }}
+        <div class="help-text">e.g. "Dealt at March tournament against pocket aces"</div>
+      </div>
+
+      <input type="hidden" name="year" value="{{ year }}">
+
+      <button type="submit" class="btn-submit">Save High Hand</button>
+    </form>
+  </div>
+</div>
+
+<script>
+const SUIT_SYMBOLS = { s:'♠', h:'♥', d:'♦', c:'♣' };
+const RED_SUITS = new Set(['h','d']);
+const CARD_IDS = ['id_card1','id_card2','id_card3','id_card4','id_card5'];
+
+const HAND_LABELS = {
+  royal_flush:'Royal Flush', straight_flush:'Straight Flush',
+  four_of_a_kind:'Four of a Kind', full_house:'Full House',
+  flush:'Flush', straight:'Straight', three_of_a_kind:'Three of a Kind',
+  two_pair:'Two Pair', one_pair:'One Pair', high_card:'High Card',
+};
+
+// ── Card exclusion ────────────────────────────────────────────────────────────
+// After any change, collect all chosen values, then for every select:
+// enable all options, then disable any that are chosen by a *different* slot.
+function syncCardOptions() {
+  const selects = CARD_IDS.map(id => document.getElementById(id));
+
+  // Map: selectEl -> its current value
+  const chosen = selects.map(s => s ? s.value : '');
+
+  selects.forEach((sel, idx) => {
+    if (!sel) return;
+    const myValue = chosen[idx];
+
+    // Build set of values taken by the OTHER slots
+    const takenByOthers = new Set(
+      chosen.filter((v, i) => i !== idx && v !== '')
+    );
+
+    Array.from(sel.options).forEach(opt => {
+      if (opt.value === '') return; // leave blank/placeholder alone
+      if (takenByOthers.has(opt.value)) {
+        opt.disabled = true;
+        opt.style.color = 'rgba(245,234,216,0.2)';
+      } else {
+        opt.disabled = false;
+        opt.style.color = '';
+      }
+    });
+  });
+}
+
+// ── Live card preview ─────────────────────────────────────────────────────────
+function buildCard(code) {
+  if (!code || code.length < 2) return null;
+  const rank = code.slice(0, -1);
+  const suit = code.slice(-1);
+  const displayRank = rank === 'T' ? '10' : rank;
+  const suitSym = SUIT_SYMBOLS[suit] || '?';
+  const colorClass = RED_SUITS.has(suit) ? 'red' : 'black';
+  return `
+    <div class="playing-card ${colorClass}">
+      <div class="card-corner-top">
+        <span class="card-rank">${displayRank}</span>
+        <span class="card-suit-corner">${suitSym}</span>
+      </div>
+      <div class="card-center-suit">${suitSym}</div>
+      <div class="card-corner-bottom">
+        <span class="card-rank">${displayRank}</span>
+        <span class="card-suit-corner">${suitSym}</span>
+      </div>
+    </div>`;
+}
+
+function updatePreview() {
+  const player = document.getElementById('id_player_name')?.value?.trim() || '—';
+  const handType = document.getElementById('id_hand_type')?.value || '';
+  const cards = CARD_IDS.map(id => document.getElementById(id)?.value || '');
+
+  document.getElementById('preview-player').textContent = player || '—';
+  document.getElementById('preview-hand-type').textContent = HAND_LABELS[handType] || '—';
+
+  const cardsHtml = cards.map(buildCard).filter(Boolean).join('');
+  document.getElementById('preview-cards').innerHTML = cardsHtml ||
+    '<div style="color:rgba(245,234,216,0.2);font-size:11px;letter-spacing:2px;">SELECT CARDS ABOVE</div>';
+}
+
+// ── Wire everything up ────────────────────────────────────────────────────────
+function onAnyChange() {
+  syncCardOptions();
+  updatePreview();
+}
+
+CARD_IDS.forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', onAnyChange);
+});
+
+['id_player_name','id_hand_type'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('change', updatePreview);
+  if (el && el.tagName === 'INPUT') el.addEventListener('input', updatePreview);
+});
+
+// Run on load to handle pre-filled edit values
+onAnyChange();
+</script>
+
+</body>
+</html>

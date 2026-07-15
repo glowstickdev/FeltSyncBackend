@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Edit Score — {{ gs.player.name }} — {{ league_name }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold:#c9a84c; --gold-light:#e8c97a; --cream:#f5ead8;
+    --red:#c0392b; --bg:#0a1e12; --card-bg:#0d2518; --border:rgba(201,168,76,0.25);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'IBM Plex Mono',monospace; background:var(--bg); color:var(--cream); min-height:100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(45,106,79,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(201,168,76,0.08) 0%, transparent 40%);
+  }
+  .top-bar {
+    border-bottom:1px solid var(--border); padding:14px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .top-bar a { color:var(--gold); text-decoration:none; font-size:11px; letter-spacing:2px; }
+  .top-bar .site-name { font-family:'Playfair Display',serif; font-size:1.1rem; color:var(--cream); }
+  .top-bar .admin-label { font-size:11px; color:rgba(245,234,216,0.25); letter-spacing:1px; }
+
+  .page-header { text-align:center; padding:50px 20px 30px; }
+  .page-header h2 { font-family:'Playfair Display',serif; font-size:2.2rem; color:var(--cream); font-weight:900; }
+  .page-header h2 span { color:var(--gold); }
+  .page-header .context { font-size:11px; letter-spacing:2px; color:rgba(245,234,216,0.35); text-transform:uppercase; margin-top:8px; }
+
+  .messages { max-width:480px; margin:20px auto 0; padding:0 20px; }
+  .msg { padding:11px 15px; border-radius:3px; margin-bottom:8px; font-size:12px; letter-spacing:1px; border:1px solid; }
+  .msg.error { background:rgba(192,57,43,0.15); border-color:rgba(192,57,43,0.4); color:#e07070; }
+  .msg.success { background:rgba(45,106,79,0.2); border-color:rgba(45,180,100,0.3); color:#7ecfa0; }
+
+  .form-wrap { max-width:480px; margin:0 auto; padding:0 20px 80px; }
+  .form-card { background:var(--card-bg); border:1px solid var(--border); border-radius:4px; padding:32px; }
+
+  .field { margin-bottom:22px; }
+  label {
+    display:block; font-size:10px; letter-spacing:3px; text-transform:uppercase;
+    color:var(--gold); opacity:.75; margin-bottom:8px;
+  }
+  input[type=number] {
+    width:100%; background:rgba(10,30,18,0.8); border:1px solid var(--border);
+    color:var(--cream); font-family:'IBM Plex Mono',monospace; font-size:14px;
+    padding:10px 14px; border-radius:3px; outline:none; transition:border-color .15s;
+  }
+  input[type=number]:focus { border-color:var(--gold); }
+  .errorlist { list-style:none; margin-top:6px; }
+  .errorlist li { font-size:11px; color:#e07070; }
+
+  .btn-submit {
+    width:100%; padding:14px; background:rgba(201,168,76,0.15);
+    border:1px solid var(--gold); color:var(--gold-light);
+    font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:3px;
+    text-transform:uppercase; cursor:pointer; border-radius:3px; transition:all .2s;
+    margin-top:8px;
+  }
+  .btn-submit:hover { background:rgba(201,168,76,0.25); }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="{% url 'monthly_results' month=gs.game.month year=gs.game.year %}">← Back to {{ gs.game }}</a>
+  <span class="site-name">{{ league_name }}</span>
+  <span class="admin-label">Admin</span>
+</div>
+
+<div class="page-header">
+  <h2>Edit <span>Score</span></h2>
+  <p class="context">{{ gs.player.name }} &mdash; {{ gs.game }}</p>
+</div>
+
+{% if messages %}
+<div class="messages">
+  {% for message in messages %}
+    <div class="msg {{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="form-wrap">
+  <div class="form-card">
+    <form method="post">
+      {% csrf_token %}
+
+      <div class="field">
+        <label for="id_rank">Rank</label>
+        {{ form.rank }}
+        {% if form.rank.errors %}<ul class="errorlist">{% for e in form.rank.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      <div class="field">
+        <label for="id_score">Points</label>
+        {{ form.score }}
+        {% if form.score.errors %}<ul class="errorlist">{% for e in form.score.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      <div class="field">
+        <label for="id_knockouts">Knockouts</label>
+        {{ form.knockouts }}
+        {% if form.knockouts.errors %}<ul class="errorlist">{% for e in form.knockouts.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      <button type="submit" class="btn-submit">Save Changes</button>
+    </form>
+  </div>
+</div>
+
+</body>
+</html>

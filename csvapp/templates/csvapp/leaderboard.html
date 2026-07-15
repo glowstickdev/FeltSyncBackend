@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ league_name }} — {{ year }} Standings</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #1a4731; --green-light: #2d6a4f; --felt: #0f3021;
+    --gold: #c9a84c; --gold-light: #e8c97a; --cream: #f5ead8;
+    --red: #c0392b; --bg: #0a1e12; --card-bg: #0d2518;
+    --border: rgba(201,168,76,0.25);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'IBM Plex Mono',monospace; background:var(--bg); color:var(--cream); min-height:100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(45,106,79,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(201,168,76,0.08) 0%, transparent 40%);
+  }
+
+  /* ── LAST UPDATED BANNER ── */
+  .last-updated {
+    background:rgba(201,168,76,0.08); border-bottom:1px solid var(--border);
+    text-align:center; padding:9px 20px; font-size:11px; letter-spacing:2px; color:var(--gold);
+  }
+  .last-updated em { color:rgba(245,234,216,0.45); font-style:normal; margin:0 8px; }
+
+  /* ── ANNOUNCEMENTS STRIP ── */
+  .ann-strip { border-bottom:1px solid var(--border); background:rgba(201,168,76,0.04); }
+  .ann-strip-inner {
+    max-width:1100px; margin:0 auto; padding:10px 20px;
+    display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
+  }
+  .ann-strip-label { font-size:9px; letter-spacing:3px; text-transform:uppercase; color:var(--gold); opacity:.7; white-space:nowrap; flex-shrink:0; }
+  .ann-strip-items { display:flex; gap:20px; flex-wrap:wrap; }
+  .ann-strip-item { font-size:11px; color:rgba(245,234,216,0.6); letter-spacing:1px; }
+  .ann-strip-item a { color:var(--gold-light); text-decoration:none; border-bottom:1px solid rgba(201,168,76,0.3); transition:border-color .15s; }
+  .ann-strip-item a:hover { border-color:var(--gold); }
+  .ann-strip-more { font-size:10px; letter-spacing:1px; color:rgba(201,168,76,0.5); text-decoration:none; white-space:nowrap; align-self:center; margin-left:auto; }
+  .ann-strip-more:hover { color:var(--gold); }
+
+  /* ── HEADER ── */
+  header {
+    text-align:center; padding:55px 20px 40px;
+    border-bottom:1px solid var(--border); position:relative; overflow:hidden;
+  }
+  header::before {
+    content:'♠ ♥ ♣ ♦ ♠ ♥ ♣ ♦ ♠ ♥ ♣ ♦ ♠ ♥ ♣ ♦ ♠ ♥ ♣ ♦ ♠ ♥ ♣ ♦';
+    position:absolute; top:16px; left:0; right:0;
+    font-size:13px; color:rgba(201,168,76,0.18); letter-spacing:8px; white-space:nowrap; overflow:hidden;
+  }
+  header::after {
+    content:'♠ ♥ ♣ ♦ ♠ ♥ ♣ ♦ ♠ ♥ ♣ ♦ ♠ ♥ ♣ ♦ ♠ ♥ ♣ ♦ ♠ ♥ ♣ ♦';
+    position:absolute; bottom:16px; left:0; right:0;
+    font-size:13px; color:rgba(201,168,76,0.18); letter-spacing:8px; white-space:nowrap; overflow:hidden;
+  }
+  .tour-label { font-size:11px; letter-spacing:6px; text-transform:uppercase; color:var(--gold); margin-bottom:10px; opacity:0.8; }
+  h1 { font-family:'Playfair Display',serif; font-size:clamp(2.4rem,6vw,4.8rem); font-weight:900; color:var(--cream); line-height:1; text-shadow:0 0 40px rgba(201,168,76,0.3); }
+  h1 span { color:var(--gold); }
+  .subtitle { margin-top:12px; font-size:11px; letter-spacing:3px; color:rgba(245,234,216,0.35); text-transform:uppercase; }
+
+  /* ── NAV ── */
+  .nav-bar {
+    display:flex; justify-content:center; align-items:center;
+    gap:10px; padding:14px 20px; border-bottom:1px solid var(--border); flex-wrap:wrap;
+  }
+  .nav-bar a {
+    color:rgba(245,234,216,0.5); text-decoration:none; font-size:11px; letter-spacing:2px;
+    text-transform:uppercase; padding:6px 14px; border:1px solid transparent; border-radius:2px; transition:all .15s;
+  }
+  .nav-bar a:hover { color:var(--gold); border-color:var(--border); }
+  .nav-bar a.active { color:var(--gold); border-color:var(--gold); }
+  .nav-sep { color:var(--border); }
+
+  /* ── DROPDOWN NAV ── */
+  .nav-dropdown { position:relative; display:inline-block; }
+  .nav-dropdown-toggle { cursor:pointer; user-select:none; }
+  .nav-dropdown-menu {
+    display:none; position:absolute; top:100%; left:50%; transform:translateX(-50%); margin-top:2px;
+    background:var(--card-bg); border:1px solid var(--border); border-radius:3px;
+    min-width:180px; padding:6px 0; z-index:1000; box-shadow:0 4px 12px rgba(0,0,0,0.3);
+  }
+  .nav-dropdown::after { content:''; position:absolute; top:100%; left:0; right:0; height:10px; }
+  .nav-dropdown:hover .nav-dropdown-menu { display:block; }
+  .nav-dropdown-menu a {
+    display:block; padding:8px 18px; color:rgba(245,234,216,0.6); text-decoration:none;
+    font-size:11px; letter-spacing:1.5px; transition:all .15s; border:none; border-radius:0; text-align:left;
+  }
+  .nav-dropdown-menu a:hover { background:rgba(201,168,76,0.08); color:var(--gold); }
+  .nav-dropdown-empty { display:block; padding:8px 18px; color:rgba(245,234,216,0.3); font-size:10px; letter-spacing:1.5px; font-style:italic; }
+  @media(max-width:600px) { .nav-dropdown-menu { left:0; transform:none; right:0; margin:8px 10px 0; } }
+
+  /* ── JACKPOT BANNER ── */
+  .jackpot-section { max-width:1000px; margin:40px auto 0; padding:0 20px; }
+  .jackpot-banner {
+    display:flex; align-items:center; justify-content:center; gap:30px; flex-wrap:wrap;
+    background:linear-gradient(135deg,rgba(201,168,76,0.12),rgba(201,168,76,0.05));
+    border:1px solid var(--gold); border-radius:4px; padding:28px 40px; position:relative; overflow:hidden;
+  }
+  .jackpot-banner::before {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(90deg,transparent,rgba(201,168,76,0.06),transparent);
+    animation:shimmer 3.5s infinite;
+  }
+  @keyframes shimmer { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+  .jp-item { text-align:center; }
+  .jp-label { font-size:10px; letter-spacing:4px; text-transform:uppercase; color:var(--gold); opacity:0.7; margin-bottom:6px; }
+  .jp-sublabel { font-size:9px; letter-spacing:2px; color:rgba(245,234,216,0.25); margin-bottom:4px; }
+  .jp-value { font-family:'Playfair Display',serif; font-size:clamp(2rem,4vw,3.5rem); font-weight:700; color:var(--gold-light); text-shadow:0 0 30px rgba(201,168,76,0.4); line-height:1; }
+  .jp-value.small { font-size:clamp(1.5rem,3vw,2.2rem); }
+  .jp-divider { width:1px; height:60px; background:var(--border); }
+  @media(max-width:580px){ .jackpot-banner{flex-direction:column;gap:14px;} .jp-divider{width:60px;height:1px;} }
+
+  /* ── YEAR PICKER ── */
+  .year-picker { text-align:center; margin:30px 0 10px; }
+  .year-picker a {
+    display:inline-block; color:rgba(245,234,216,0.4); font-size:11px; letter-spacing:2px;
+    text-decoration:none; padding:5px 14px; border:1px solid transparent; border-radius:2px; margin:2px; transition:all .15s;
+  }
+  .year-picker a:hover { color:var(--gold); border-color:var(--border); }
+  .year-picker a.current { color:var(--gold); border-color:var(--gold); }
+
+  /* ── MAIN ── */
+  main { max-width:1100px; margin:0 auto; padding:40px 20px 80px; }
+  .section-title {
+    font-family:'Playfair Display',serif; font-size:1.4rem; color:var(--gold);
+    margin-bottom:18px; display:flex; align-items:center; gap:12px;
+  }
+  .section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+  /* ── STANDINGS TABLE ── */
+  .leaderboard-wrap { background:var(--card-bg); border:1px solid var(--border); border-radius:4px; overflow:hidden; margin-bottom:50px; }
+  table { width:100%; border-collapse:collapse; }
+  thead tr { background:rgba(201,168,76,0.1); border-bottom:1px solid var(--border); }
+  th { padding:13px 16px; font-size:9px; letter-spacing:3px; text-transform:uppercase; color:var(--gold); font-weight:600; text-align:left; }
+  th:not(:first-child) { text-align:center; }
+  tbody tr { border-bottom:1px solid rgba(201,168,76,0.07); transition:background .15s; }
+  tbody tr:last-child { border-bottom:none; }
+  tbody tr:hover { background:rgba(201,168,76,0.04); }
+  tbody tr:nth-child(1) { background:rgba(201,168,76,0.06); }
+  tbody tr:nth-child(2) { background:rgba(192,192,192,0.03); }
+  tbody tr:nth-child(3) { background:rgba(205,127,50,0.03); }
+  td { padding:13px 16px; font-size:13px; color:var(--cream); text-align:center; }
+  td:first-child { text-align:left; }
+  .rank-num { display:inline-block; width:22px; color:rgba(245,234,216,0.25); font-size:11px; margin-right:5px; }
+  .medal { font-size:15px; margin-right:2px; }
+  .player-name { font-weight:600; font-size:14px; }
+  .points-val { font-family:'Playfair Display',serif; font-size:16px; color:var(--gold-light); font-weight:700; }
+  .games-badge { display:inline-block; padding:3px 10px; border:1px solid var(--border); border-radius:20px; font-size:11px; color:rgba(245,234,216,0.55); }
+  .ko-val { color:var(--red); font-weight:600; }
+  .ko-zero { color:rgba(245,234,216,0.22); }
+  .score-chips { font-size:10px; color:rgba(245,234,216,0.35); margin-top:3px; }
+
+  /* ── SPARKLINES ── */
+  .sparkline-wrap { display:inline-block; vertical-align:middle; margin-left:10px; }
+  .sparkline { display:block; }
+  .spark-flat { display:inline-block; width:60px; height:20px; vertical-align:middle;
+    margin-left:10px; border-bottom:1px solid rgba(201,168,76,0.2); }
+
+
+  /* ── LEADERS GRID ── */
+  .leaders-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:50px; }
+  @media(max-width:600px){ .leaders-grid{grid-template-columns:1fr;} }
+  .stat-card { background:var(--card-bg); border:1px solid var(--border); border-radius:4px; padding:22px; }
+  .stat-card-title { font-size:9px; letter-spacing:4px; text-transform:uppercase; color:var(--gold); opacity:.7; margin-bottom:14px; }
+  .stat-list { list-style:none; }
+  .stat-list li { display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid rgba(201,168,76,0.07); font-size:13px; }
+  .stat-list li:last-child { border-bottom:none; }
+  .sl-rank { color:rgba(245,234,216,0.28); font-size:11px; width:18px; }
+  .sl-val { color:var(--red); font-weight:600; }
+
+  /* ── HIGH HAND CARD ── */
+  .high-hand-card {
+    background:var(--card-bg); border:1px solid var(--border);
+    border-radius:4px; padding:22px; position:relative; overflow:hidden;
+  }
+  .high-hand-card::before {
+    content:''; position:absolute; inset:0;
+    background:radial-gradient(ellipse at top left,rgba(201,168,76,0.07),transparent 65%);
+    pointer-events:none;
+  }
+  .hh-label { font-size:9px; letter-spacing:4px; text-transform:uppercase; color:var(--gold); opacity:.7; margin-bottom:6px; }
+  .hh-hand-type { font-family:'Playfair Display',serif; font-size:1.25rem; color:var(--gold-light); font-weight:700; line-height:1.2; }
+  .hh-player { font-size:11px; letter-spacing:2px; color:rgba(245,234,216,0.5); text-transform:uppercase; margin-top:4px; margin-bottom:16px; }
+  .hh-player strong { color:var(--cream); font-size:13px; letter-spacing:1px; text-transform:none; }
+
+  /* ── PLAYING CARDS ── */
+  .hh-cards { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; margin-bottom:4px; }
+  .playing-card {
+    width:52px; height:76px; background:#fff; border-radius:5px;
+    box-shadow:0 3px 8px rgba(0,0,0,0.5), 0 1px 2px rgba(0,0,0,0.3);
+    display:flex; flex-direction:column; justify-content:space-between;
+    padding:4px 5px; font-family:'Playfair Display',serif;
+    position:relative; font-weight:700; transition:transform .15s; cursor:default;
+  }
+  .playing-card:hover { transform:translateY(-5px); }
+  .playing-card.red { color:#c0392b; }
+  .playing-card.black { color:#1a1a2e; }
+  .card-corner-top { display:flex; flex-direction:column; align-items:flex-start; line-height:1; }
+  .card-corner-bottom { display:flex; flex-direction:column; align-items:flex-end; transform:rotate(180deg); line-height:1; }
+  .card-rank { font-size:15px; }
+  .card-suit-corner { font-size:11px; margin-top:-1px; }
+  .card-center-suit { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:22px; line-height:1; }
+
+  .hh-notes { margin-top:12px; font-size:10px; letter-spacing:1px; color:rgba(245,234,216,0.3); font-style:italic; text-align:center; line-height:1.6; }
+  .hh-empty { text-align:center; padding:20px 0; color:rgba(245,234,216,0.2); font-size:11px; letter-spacing:2px; }
+  .hh-empty .icon { font-size:2rem; opacity:.3; display:block; margin-bottom:8px; }
+
+  /* Admin edit button on high hand card */
+  .hh-admin { margin-top:16px; padding-top:14px; border-top:1px solid rgba(201,168,76,0.1); text-align:center; }
+  .btn-edit-hh {
+    display:inline-block; font-family:'IBM Plex Mono',monospace; font-size:10px;
+    letter-spacing:2px; text-transform:uppercase; padding:7px 18px;
+    border:1px solid var(--border); border-radius:3px; color:var(--gold);
+    text-decoration:none; background:transparent; transition:all .15s;
+  }
+  .btn-edit-hh:hover { border-color:var(--gold); background:rgba(201,168,76,0.08); }
+
+  /* ── EVENTS STRIP ── */
+  .events-strip { background:var(--card-bg); border:1px solid var(--border); border-radius:4px; overflow:hidden; margin-bottom:50px; }
+  .events-strip-inner { display:flex; flex-wrap:wrap; }
+  .event-mini {
+    flex:1; min-width:220px; padding:20px 24px; border-right:1px solid var(--border);
+    display:flex; gap:16px; align-items:flex-start; text-decoration:none; transition:background 0.15s;
+  }
+  .event-mini:hover { background:rgba(201,168,76,0.04); cursor:pointer; }
+  .event-mini:last-child { border-right:none; }
+  .em-date { text-align:center; min-width:44px; }
+  .em-month { font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--gold); opacity:.8; }
+  .em-day { font-family:'Playfair Display',serif; font-size:1.8rem; color:var(--gold-light); line-height:1; font-weight:700; }
+  .em-title { font-size:13px; font-weight:600; color:var(--cream); margin-bottom:3px; }
+  .em-time { font-size:10px; color:rgba(245,234,216,0.4); letter-spacing:1px; }
+  .em-loc { font-size:10px; color:rgba(245,234,216,0.35); margin-top:2px; }
+  .events-strip-footer { padding:12px 24px; border-top:1px solid var(--border); font-size:10px; letter-spacing:2px; text-align:right; }
+  .events-strip-footer a { color:var(--gold); text-decoration:none; opacity:.7; }
+  .events-strip-footer a:hover { opacity:1; }
+  @media(max-width:600px){ .event-mini{border-right:none;border-bottom:1px solid var(--border);} .event-mini:last-child{border-bottom:none;} }
+
+  /* ── MESSAGES ── */
+  .messages { max-width:1000px; margin:20px auto 0; padding:0 20px; }
+  .msg { padding:12px 16px; border-radius:3px; margin-bottom:8px; font-size:12px; letter-spacing:1px; border:1px solid; }
+  .msg.success { background:rgba(45,106,79,0.2); border-color:rgba(45,106,79,0.5); color:#7ecda0; }
+  .msg.error   { background:rgba(192,57,43,0.15); border-color:rgba(192,57,43,0.4); color:#e07070; }
+  .msg.warning { background:rgba(201,168,76,0.1); border-color:var(--border); color:var(--gold); }
+
+  /*Player Stats*/
+  .player-name-link { text-decoration:none; color:inherit; }
+  .player-name-link:hover .player-name { color:var(--gold); }
+
+  /* ── FOOTER ── */
+  footer { text-align:center; padding:28px; border-top:1px solid var(--border); font-size:11px; color:rgba(245,234,216,0.18); letter-spacing:2px; }
+</style>
+</head>
+<body>
+
+{% if last_updated %}
+<div class="last-updated">
+  ♠ <em>LAST UPDATED</em>
+  {{ last_updated|date:"F j, Y" }} at {{ last_updated|date:"g:i A" }} MST
+  <em>|</em> Tournament #{{ tournament_count }} Complete
+  <em>♠</em>
+</div>
+{% endif %}
+
+{% if pinned_announcements %}
+<div class="ann-strip">
+  <div class="ann-strip-inner">
+    <span class="ann-strip-label">📌 Announcements</span>
+    <div class="ann-strip-items">
+      {% for ann in pinned_announcements %}
+      <span class="ann-strip-item"><a href="{% url 'announcements' %}">{{ ann.title }}</a></span>
+      {% endfor %}
+    </div>
+    <a href="{% url 'announcements' %}" class="ann-strip-more">View all →</a>
+  </div>
+</div>
+{% endif %}
+
+<header>
+  <div class="tour-label">{{ year }} Season</div>
+  <h1>{{ league_name }}</h1>
+  <p class="subtitle">Year-to-Date Standings</p>
+  <div class="jackpot-section" style="max-width:900px;margin:35px auto 0;padding:0;">
+    <div class="jackpot-banner">
+      <div class="jp-item">
+        <div class="jp-label">End of Year Prize Pool</div>
+        <div class="jp-sublabel">JACKPOT</div>
+        <div class="jp-value">${{ total_eoy_pool|floatformat:2 }}</div>
+      </div>
+      <div class="jp-divider"></div>
+      <div class="jp-item">
+        <div class="jp-label">Players</div>
+        <div class="jp-value small">{{ player_count }}</div>
+      </div>
+      <div class="jp-divider"></div>
+      <div class="jp-item">
+        <div class="jp-label">Tournaments</div>
+        <div class="jp-value small">{{ tournament_count }}</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+{% if messages %}
+<div class="messages">
+  {% for message in messages %}
+    <div class="msg {{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if available_years|length > 1 %}
+<div class="year-picker">
+  {% for y in available_years %}
+    <a href="{% url 'leaderboard' year=y %}" {% if y == year %}class="current"{% endif %}>{{ y }}</a>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="nav-bar">
+  <a href="{% url 'leaderboard' year=year %}" class="active">Standings</a>
+  <span class="nav-sep">|</span>
+  <a href="{% url 'announcements' %}">Announcements</a>
+  <span class="nav-sep">|</span>
+  <div class="nav-dropdown">
+    <a href="#" class="nav-dropdown-toggle">Monthly Results ▾</a>
+    <div class="nav-dropdown-menu">
+      {% if games_this_year %}
+        {% for g in games_this_year %}
+          <a href="{% url 'monthly_results' month=g.month year=g.year %}">{{ g.get_month_display }} {{ g.year }}</a>
+        {% endfor %}
+      {% else %}
+        <span class="nav-dropdown-empty">No tournaments yet</span>
+      {% endif %}
+    </div>
+  </div>
+  <span class="nav-sep">|</span>
+  {% if games_this_year %}
+  <a href="{% url 'season_chart' year=year %}">Season Chart</a>
+  <span class="nav-sep">|</span>
+  {% endif %}
+  <a href="{% url 'events' %}">Events</a>
+  {% if request.user.is_authenticated %}
+    <span class="nav-sep">|</span>
+    <a href="{% url 'upload' %}">⬆ Upload</a>
+    <span class="nav-sep">|</span>
+    <a href="{% url 'site_settings' %}">⚙ Theme</a>
+  {% endif %}
+</div>
+
+<main>
+
+  <!-- UPCOMING EVENTS -->
+  {% if upcoming_events %}
+  <div class="section-title">Upcoming Games</div>
+  <div class="events-strip">
+    <div class="events-strip-inner">
+      {% for event in upcoming_events %}
+      <a href="{% url 'events' %}" class="event-mini">
+        <div class="em-date">
+          <div class="em-month">{{ event.event_date|date:"M" }}</div>
+          <div class="em-day">{{ event.event_date|date:"j" }}</div>
+        </div>
+        <div class="em-body">
+          <div class="em-title">{{ event.title }}</div>
+          <div class="em-time">{{ event.event_date|date:"g:i A" }} MST</div>
+          {% if event.location %}<div class="em-loc">📍 {{ event.location }}</div>{% endif %}
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    <div class="events-strip-footer">
+      <a href="{% url 'events' %}">View all events & add to calendar →</a>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- OVERALL STANDINGS -->
+  <div class="section-title">Overall Standings</div>
+  <div class="leaderboard-wrap">
+    {% if leaderboard %}
+    <table>
+      <thead>
+        <tr>
+          <th>Player</th>
+          <th>Points (Top 5)</th>
+          <th>Games Played</th>
+          <th>Knockouts</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in leaderboard %}
+        <tr>
+          <td>
+            <span class="rank-num">{{ entry.rank }}</span>
+            {% if entry.rank == 1 %}<span class="medal">🥇</span>
+            {% elif entry.rank == 2 %}<span class="medal">🥈</span>
+            {% elif entry.rank == 3 %}<span class="medal">🥉</span>
+            {% endif %}
+            <a href="{% url 'player_profile' pk=entry.player.pk %}" class="player-name-link">
+              <span class="player-name">{{ entry.player.name }}</span>
+            </a>
+            {% if entry.monthly_scores|length >= 2 %}
+            <span class="sparkline-wrap">
+              <svg class="sparkline" width="60" height="22"
+                   data-scores="{% for ms in entry.monthly_scores %}{{ ms.score }}{% if not forloop.last %},{% endif %}{% endfor %}"
+                   viewBox="0 0 60 22"></svg>
+            </span>
+            {% else %}
+            <span class="spark-flat"></span>
+            {% endif %}
+            {% if entry.top5_scores %}
+            <div class="score-chips">
+              {% for s in entry.top5_scores %}{{ s|floatformat:2 }}{% if not forloop.last %} · {% endif %}{% endfor %}
+            </div>
+            {% endif %}
+          </td>
+          <td><span class="points-val">{{ entry.top5_total|floatformat:2 }}</span></td>
+          <td><span class="games-badge">{{ entry.games_played }}</span></td>
+          <td>
+            {% if entry.total_ko > 0 %}<span class="ko-val">💀 {{ entry.total_ko }}</span>
+            {% else %}<span class="ko-zero">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div style="text-align:center;padding:60px 20px;color:rgba(245,234,216,0.3);font-size:13px;letter-spacing:2px;">
+      NO DATA FOR {{ year }} YET — UPLOAD A TOURNAMENT CSV TO GET STARTED
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- KNOCKOUT LEADERS + HIGH HAND -->
+  {% if leaderboard %}
+  <div class="leaders-grid">
+
+    <div class="stat-card">
+      <div class="stat-card-title">🔫 Knockout Leaders</div>
+      <div style="font-size:9px;letter-spacing:2px;color:rgba(245,234,216,0.3);text-transform:uppercase;margin-bottom:12px;margin-top:-8px;">April – Present</div>
+      <ul class="stat-list">
+        {% for entry in knockout_leaders|slice:":8" %}
+        {% if entry.april_kos > 0 or forloop.counter <= 5 %}
+        <li>
+          <span class="sl-rank">{{ forloop.counter }}</span>
+          <span>{{ entry.player.name }}</span>
+          <span class="sl-val">{% if entry.april_kos > 0 %}💀 {{ entry.april_kos }}{% else %}—{% endif %}</span>
+        </li>
+        {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+
+    <!-- HIGH HAND OF THE YEAR -->
+    <div class="high-hand-card">
+      <div class="hh-label">🃏 High Hand of the Year</div>
+      {% if high_hand %}
+        <div class="hh-hand-type">{{ high_hand.get_hand_type_display }}</div>
+        <div class="hh-player">Current Holder &nbsp;·&nbsp; <strong>{{ high_hand.player_name }}</strong></div>
+        <div class="hh-cards">
+          {% for card_code in high_hand.cards %}
+            {% with rank=card_code|slice:":1" suit=card_code|slice:"1:" %}
+              {% if suit == "h" or suit == "d" %}
+                <div class="playing-card red">
+              {% else %}
+                <div class="playing-card black">
+              {% endif %}
+                  <div class="card-corner-top">
+                    <span class="card-rank">{% if rank == "T" %}10{% else %}{{ rank }}{% endif %}</span>
+                    <span class="card-suit-corner">{% if suit == "s" %}♠{% elif suit == "h" %}♥{% elif suit == "d" %}♦{% else %}♣{% endif %}</span>
+                  </div>
+                  <div class="card-center-suit">
+                    {% if suit == "s" %}♠{% elif suit == "h" %}♥{% elif suit == "d" %}♦{% else %}♣{% endif %}
+                  </div>
+                  <div class="card-corner-bottom">
+                    <span class="card-rank">{% if rank == "T" %}10{% else %}{{ rank }}{% endif %}</span>
+                    <span class="card-suit-corner">{% if suit == "s" %}♠{% elif suit == "h" %}♥{% elif suit == "d" %}♦{% else %}♣{% endif %}</span>
+                  </div>
+                </div>
+            {% endwith %}
+          {% endfor %}
+        </div>
+        {% if high_hand.notes %}<div class="hh-notes">{{ high_hand.notes }}</div>{% endif %}
+      {% else %}
+        <div class="hh-hand-type" style="color:rgba(245,234,216,0.3);">Not Yet Set</div>
+        <div class="hh-empty">
+          <span class="icon">🂠</span>
+          NO HIGH HAND RECORDED YET
+        </div>
+      {% endif %}
+
+      {% if request.user.is_authenticated %}
+      <div class="hh-admin">
+        <a href="{% url 'highhand_edit' year=year %}" class="btn-edit-hh">
+          ✏ {% if high_hand %}Update High Hand{% else %}Set High Hand{% endif %}
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
+  </div>
+  {% endif %}
+
+</main>
+
+<footer>♠ {{ league_name }} &nbsp;·&nbsp; {{ year }} Season ♠</footer>
+
+<script>
+(function() {
+  const svgs = document.querySelectorAll('svg.sparkline[data-scores]');
+  svgs.forEach(svg => {
+    const raw = svg.getAttribute('data-scores');
+    const scores = raw.split(',').map(Number);
+    if (scores.length < 2) return;
+
+    const W = 60, H = 22, pad = 2;
+    const min = Math.min(...scores);
+    const max = Math.max(...scores);
+    const range = max - min || 1;
+
+    const points = scores.map((s, i) => {
+      const x = pad + (i / (scores.length - 1)) * (W - pad * 2);
+      const y = H - pad - ((s - min) / range) * (H - pad * 2);
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    });
+
+    const trend = scores[scores.length - 1] - scores[0];
+    const lineColor = trend >= 0 ? '#c9a84c' : 'rgba(192,57,43,0.7)';
+    const fillColor = trend >= 0 ? 'rgba(201,168,76,0.08)' : 'rgba(192,57,43,0.06)';
+
+    const ns = 'http://www.w3.org/2000/svg';
+
+    // Filled area
+    const areaPoints = pad + ',' + H + ' ' + points.join(' ') + ' ' + (W - pad) + ',' + H;
+    const area = document.createElementNS(ns, 'polygon');
+    area.setAttribute('points', areaPoints);
+    area.setAttribute('fill', fillColor);
+    svg.appendChild(area);
+
+    // Line
+    const polyline = document.createElementNS(ns, 'polyline');
+    polyline.setAttribute('points', points.join(' '));
+    polyline.setAttribute('fill', 'none');
+    polyline.setAttribute('stroke', lineColor);
+    polyline.setAttribute('stroke-width', '1.5');
+    polyline.setAttribute('stroke-linejoin', 'round');
+    polyline.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(polyline);
+
+    // End dot
+    const lastPt = points[points.length - 1].split(',');
+    const dot = document.createElementNS(ns, 'circle');
+    dot.setAttribute('cx', lastPt[0]);
+    dot.setAttribute('cy', lastPt[1]);
+    dot.setAttribute('r', '2');
+    dot.setAttribute('fill', lineColor);
+    svg.appendChild(dot);
+  });
+})();
+</script>
+
+</body>
+</html>

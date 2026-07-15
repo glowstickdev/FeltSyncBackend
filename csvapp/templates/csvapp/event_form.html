@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ action }} Event — {{ league_name }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --gold:#c9a84c; --gold-light:#e8c97a; --cream:#f5ead8;
+    --red:#c0392b; --bg:#0a1e12; --card-bg:#0d2518;
+    --border:rgba(201,168,76,0.25);
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'IBM Plex Mono',monospace; background:var(--bg); color:var(--cream); min-height:100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(45,106,79,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(201,168,76,0.08) 0%, transparent 40%);
+  }
+  .top-bar {
+    border-bottom:1px solid var(--border); padding:14px 28px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .top-bar a { color:var(--gold); text-decoration:none; font-size:11px; letter-spacing:2px; }
+  .top-bar .site-name { font-family:'Playfair Display',serif; font-size:1.1rem; color:var(--cream); }
+
+  .page-header { text-align:center; padding:50px 20px 30px; }
+  .page-header h2 { font-family:'Playfair Display',serif; font-size:2.2rem; color:var(--cream); font-weight:900; }
+  .page-header h2 span { color:var(--gold); }
+
+  .form-wrap { max-width:600px; margin:0 auto; padding:0 20px 80px; }
+  .form-card { background:var(--card-bg); border:1px solid var(--border); border-radius:4px; padding:32px; }
+
+  .field { margin-bottom:22px; }
+  label { display:block; font-size:10px; letter-spacing:3px; text-transform:uppercase; color:var(--gold); opacity:.75; margin-bottom:8px; }
+  input[type=text], input[type=datetime-local], textarea {
+    width:100%; background:rgba(10,30,18,0.8); border:1px solid var(--border);
+    color:var(--cream); font-family:'IBM Plex Mono',monospace; font-size:13px;
+    padding:10px 14px; border-radius:3px; outline:none; transition:border-color .15s;
+  }
+  input[type=text]:focus, input[type=datetime-local]:focus, textarea:focus { border-color:var(--gold); }
+  /* Fix datetime-local calendar icon color */
+  input[type=datetime-local]::-webkit-calendar-picker-indicator { filter:invert(0.7); cursor:pointer; }
+  .help-text { font-size:10px; color:rgba(245,234,216,0.3); letter-spacing:1px; margin-top:6px; }
+
+  .btn-submit {
+    width:100%; padding:14px; background:rgba(201,168,76,0.15);
+    border:1px solid var(--gold); color:var(--gold-light);
+    font-family:'IBM Plex Mono',monospace; font-size:12px; letter-spacing:3px;
+    text-transform:uppercase; cursor:pointer; border-radius:3px; transition:all .2s;
+  }
+  .btn-submit:hover { background:rgba(201,168,76,0.25); }
+
+  .messages { max-width:600px; margin:20px auto 0; padding:0 20px; }
+  .msg { padding:11px 15px; border-radius:3px; margin-bottom:8px; font-size:12px; letter-spacing:1px; border:1px solid; }
+  .msg.error { background:rgba(192,57,43,0.15); border-color:rgba(192,57,43,0.4); color:#e07070; }
+
+  .errorlist { list-style:none; margin-top:6px; }
+  .errorlist li { font-size:11px; color:#e07070; }
+</style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="{% url 'events' %}">← Back to Events</a>
+  <span class="site-name">{{ league_name }}</span>
+  <span style="font-size:11px;color:rgba(245,234,216,0.25);">Admin</span>
+</div>
+
+<div class="page-header">
+  <h2>{{ action }} <span>Event</span></h2>
+</div>
+
+{% if messages %}
+<div class="messages">
+  {% for message in messages %}
+    <div class="msg {{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="form-wrap">
+  <div class="form-card">
+    <form method="post">
+      {% csrf_token %}
+
+      <div class="field">
+        <label for="id_title">Event Title</label>
+        {{ form.title }}
+        {% if form.title.errors %}<ul class="errorlist">{% for e in form.title.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      <div class="field">
+        <label for="id_event_date">Start Time <span style="color:rgba(245,234,216,0.3);font-size:9px;letter-spacing:1px;">(Arizona Time — MST)</span></label>
+        {{ form.event_date }}
+        {% if form.event_date.errors %}<ul class="errorlist">{% for e in form.event_date.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      <div class="field">
+        <label for="id_end_time">End Time <span style="color:rgba(245,234,216,0.3);font-size:9px;letter-spacing:1px;">(Arizona Time — MST · Optional)</span></label>
+        {{ form.end_time }}
+        <div class="help-text">Leave blank to default to 4 hours after start time.</div>
+        {% if form.end_time.errors %}<ul class="errorlist">{% for e in form.end_time.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      <div class="field">
+        <label for="id_location">Location</label>
+        {{ form.location }}
+        {% if form.location.errors %}<ul class="errorlist">{% for e in form.location.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      <div class="field">
+        <label for="id_description">Description</label>
+        {{ form.description }}
+        <div class="help-text">Buy-in amount, special rules, contact info, etc.</div>
+        {% if form.description.errors %}<ul class="errorlist">{% for e in form.description.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+
+      <button type="submit" class="btn-submit">{{ action }} Event</button>
+    </form>
+  </div>
+</div>
+
+</body>
+</html>

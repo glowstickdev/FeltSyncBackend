@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Delete Announcement — {{ league_name }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root { --gold:#c9a84c; --gold-light:#e8c97a; --cream:#f5ead8; --red:#c0392b; --bg:#0a1e12; --card-bg:#0d2518; --border:rgba(201,168,76,0.25); }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    font-family:'IBM Plex Mono',monospace; background:var(--bg); color:var(--cream);
+    min-height:100vh; display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .card {
+    background:var(--card-bg); border:1px solid rgba(192,57,43,0.4);
+    border-radius:4px; padding:40px; max-width:460px; width:100%; text-align:center;
+  }
+  .icon { font-size:2.5rem; margin-bottom:16px; }
+  h2 { font-family:'Playfair Display',serif; font-size:1.6rem; color:var(--cream); margin-bottom:10px; }
+  p { font-size:12px; color:rgba(245,234,216,0.45); letter-spacing:1px; line-height:1.7; margin-bottom:28px; }
+  p strong { color:#e07070; }
+  .btns { display:flex; gap:12px; justify-content:center; }
+  .btn {
+    padding:11px 24px; font-family:'IBM Plex Mono',monospace; font-size:11px;
+    letter-spacing:2px; text-transform:uppercase; border-radius:3px;
+    cursor:pointer; text-decoration:none; border:1px solid;
+  }
+  .btn-cancel { background:transparent; border-color:var(--border); color:rgba(245,234,216,0.45); }
+  .btn-cancel:hover { color:var(--gold); border-color:var(--gold); }
+  .btn-delete { background:rgba(192,57,43,0.15); border-color:rgba(192,57,43,0.5); color:#e07070; }
+  .btn-delete:hover { background:rgba(192,57,43,0.25); }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="icon">⚠️</div>
+  <h2>Delete Announcement?</h2>
+  <p>This will permanently remove <strong>"{{ announcement.title }}"</strong>. This cannot be undone.</p>
+  <div class="btns">
+    <a href="{% url 'announcements' %}" class="btn btn-cancel">Cancel</a>
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-delete">Yes, Delete</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>

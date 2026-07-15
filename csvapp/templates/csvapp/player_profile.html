@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ player.name }} — {{ league_name }}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --green-deep: #0a1e12;
+      --green-mid:  #0f2918;
+      --card-bg:    #111f16;
+      --gold:       #c9a84c;
+      --gold-light: #e8c96d;
+      --cream:      #f5ead8;
+      --border:     rgba(201,168,76,0.18);
+      --red:        #c0392b;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--green-deep); color:var(--cream); font-family:'IBM Plex Mono',monospace; min-height:100vh; }
+
+    /* ── TOP BAR ── */
+    .top-bar {
+      display:flex; justify-content:space-between; align-items:center;
+      padding:14px 28px; border-bottom:1px solid var(--border);
+      font-size:11px; letter-spacing:2px;
+    }
+    .top-bar a { color:var(--gold); text-decoration:none; }
+    .top-bar a:hover { color:var(--gold-light); }
+    .site-name { color:rgba(245,234,216,0.4); }
+
+    /* ── HEADER ── */
+    header { text-align:center; padding:50px 20px 30px; border-bottom:1px solid var(--border); }
+    .player-initial {
+      width:72px; height:72px; border-radius:50%;
+      background:rgba(201,168,76,0.15); border:2px solid var(--gold);
+      display:flex; align-items:center; justify-content:center;
+      font-family:'Playfair Display',serif; font-size:2rem; color:var(--gold-light);
+      margin:0 auto 18px;
+    }
+    header h1 { font-family:'Playfair Display',serif; font-size:clamp(1.8rem,4vw,2.8rem); color:var(--gold-light); margin-bottom:6px; }
+    header h1 span { color:var(--cream); }
+    .subtitle { font-size:10px; letter-spacing:4px; color:rgba(245,234,216,0.35); text-transform:uppercase; }
+
+    /* ── NAV ── */
+    .nav-bar {
+      display:flex; justify-content:center; align-items:center; gap:16px; flex-wrap:wrap;
+      padding:16px 20px; border-bottom:1px solid var(--border);
+      font-size:11px; letter-spacing:2px;
+    }
+    .nav-bar a { color:rgba(245,234,216,0.5); text-decoration:none; text-transform:uppercase; transition:color .15s; }
+    .nav-bar a:hover { color:var(--gold); }
+    .nav-sep { color:var(--border); }
+
+    /* ── LIFETIME STATS BANNER ── */
+    .stats-banner {
+      display:flex; justify-content:center; align-items:center; gap:0; flex-wrap:wrap;
+      max-width:700px; margin:40px auto 0;
+      background:rgba(201,168,76,0.06); border:1px solid var(--border); border-radius:4px;
+    }
+    .stat-item { flex:1; min-width:120px; text-align:center; padding:22px 16px; }
+    .stat-item:not(:last-child) { border-right:1px solid var(--border); }
+    .stat-label { font-size:9px; letter-spacing:3px; text-transform:uppercase; color:var(--gold); opacity:.7; margin-bottom:8px; }
+    .stat-value { font-family:'Playfair Display',serif; font-size:1.8rem; color:var(--gold-light); font-weight:700; }
+    .stat-sub { font-size:10px; color:rgba(245,234,216,0.3); margin-top:4px; }
+
+    /* ── MAIN ── */
+    main { max-width:900px; margin:0 auto; padding:40px 20px 80px; }
+    .section-title {
+      font-family:'Playfair Display',serif; font-size:1.2rem; color:var(--gold);
+      margin-bottom:18px; margin-top:40px; display:flex; align-items:center; gap:12px;
+    }
+    .section-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    /* ── CHART ── */
+    .chart-wrap {
+      background:var(--card-bg); border:1px solid var(--border); border-radius:4px;
+      padding:24px; margin-bottom:10px;
+    }
+
+    /* ── YEAR CARDS ── */
+    .year-card {
+      background:var(--card-bg); border:1px solid var(--border); border-radius:4px;
+      margin-bottom:18px; overflow:hidden;
+    }
+    .year-card-header {
+      display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;
+      padding:16px 20px; background:rgba(201,168,76,0.06); border-bottom:1px solid var(--border);
+    }
+    .year-title { font-family:'Playfair Display',serif; font-size:1.1rem; color:var(--gold-light); }
+    .year-meta { display:flex; gap:16px; flex-wrap:wrap; align-items:center; }
+    .year-badge {
+      font-size:10px; letter-spacing:1px; padding:4px 12px;
+      border:1px solid var(--border); border-radius:20px; color:rgba(245,234,216,0.5);
+    }
+    .year-rank { font-size:10px; letter-spacing:1px; padding:4px 12px; border-radius:20px; }
+    .year-rank.rank-1 { background:rgba(201,168,76,0.2); border:1px solid var(--gold); color:var(--gold-light); }
+    .year-rank.rank-top3 { background:rgba(192,192,192,0.1); border:1px solid rgba(192,192,192,0.3); color:#c0c0c0; }
+    .year-rank.rank-other { border:1px solid var(--border); color:rgba(245,234,216,0.4); }
+    .year-total { font-family:'Playfair Display',serif; font-size:1.3rem; color:var(--gold-light); }
+
+    /* ── RESULTS TABLE ── */
+    table { width:100%; border-collapse:collapse; }
+    thead tr { background:rgba(201,168,76,0.06); border-bottom:1px solid var(--border); }
+    th { padding:10px 16px; font-size:9px; letter-spacing:3px; text-transform:uppercase; color:var(--gold); font-weight:600; text-align:left; }
+    th:not(:first-child) { text-align:center; }
+    tbody tr { border-bottom:1px solid rgba(201,168,76,0.06); transition:background .15s; }
+    tbody tr:last-child { border-bottom:none; }
+    tbody tr:hover { background:rgba(201,168,76,0.04); }
+    td { padding:11px 16px; font-size:13px; color:var(--cream); text-align:center; }
+    td:first-child { text-align:left; }
+    .month-link { color:var(--cream); text-decoration:none; }
+    .month-link:hover { color:var(--gold); }
+    .rank-num { color:rgba(245,234,216,0.3); font-size:11px; margin-right:6px; }
+    .medal { font-size:13px; margin-right:2px; }
+    .points-val { font-family:'Playfair Display',serif; font-size:15px; color:var(--gold-light); font-weight:700; }
+    .ko-val { color:var(--red); font-weight:600; }
+    .ko-zero { color:rgba(245,234,216,0.22); }
+    .counting-row { background:rgba(201,168,76,0.04); }
+    .counting-dot { display:inline-block; width:6px; height:6px; border-radius:50%; background:var(--gold); margin-left:6px; vertical-align:middle; opacity:.7; }
+
+    footer { text-align:center; padding:26px; border-top:1px solid var(--border); font-size:11px; color:rgba(245,234,216,0.18); letter-spacing:2px; }
+  </style>
+</head>
+<body>
+
+<div class="top-bar">
+  <a href="javascript:history.back()">← Back</a>
+  <span class="site-name">{{ league_name }}</span>
+  <span style="width:60px;"></span>
+</div>
+
+<header>
+  <div class="player-initial">{{ player.name|first|upper }}</div>
+  <h1><span>{{ player.name }}</span></h1>
+  <p class="subtitle">Player Profile</p>
+</header>
+
+<div class="nav-bar">
+  <a href="{% url 'leaderboard' year=year_summaries.0.year %}">Standings</a>
+  <span class="nav-sep">|</span>
+  <a href="{% url 'announcements' %}">Announcements</a>
+  <span class="nav-sep">|</span>
+  <a href="{% url 'events' %}">Events</a>
+  <span class="nav-sep">|</span>
+  <a href="{% url 'head_to_head' %}?p1={{ player.pk }}">Compare</a>
+</div>
+
+<!-- LIFETIME STATS -->
+<div class="stats-banner">
+  <div class="stat-item">
+    <div class="stat-label">Seasons</div>
+    <div class="stat-value">{{ seasons_played }}</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-label">Games Played</div>
+    <div class="stat-value">{{ lifetime_games }}</div>
+  </div>
+  <div class="stat-item">
+    <div class="stat-label">Lifetime KOs</div>
+    <div class="stat-value">{{ lifetime_ko }}</div>
+    <div class="stat-sub">💀</div>
+  </div>
+</div>
+
+<main>
+
+  <!-- SCORE TREND CHART -->
+  {% if year_summaries %}
+  <div class="section-title">Score Trend</div>
+  <div class="chart-wrap">
+    <canvas id="trendChart" height="80"></canvas>
+  </div>
+  {% endif %}
+
+  <!-- SEASON BREAKDOWN -->
+  <div class="section-title">Season History</div>
+
+  {% for summary in year_summaries %}
+  <div class="year-card">
+    <div class="year-card-header">
+      <span class="year-title">{{ summary.year }} Season</span>
+      <div class="year-meta">
+        <span class="year-badge">{{ summary.games_played }} game{{ summary.games_played|pluralize }}</span>
+        <span class="year-badge">{{ summary.scoring_note }}</span>
+        {% if summary.total_ko > 0 %}
+        <span class="year-badge">💀 {{ summary.total_ko }} KO{{ summary.total_ko|pluralize }}</span>
+        {% endif %}
+        {% if summary.season_rank %}
+          {% if summary.season_rank == 1 %}
+          <span class="year-rank rank-1">🥇 Season Champion</span>
+          {% elif summary.season_rank <= 3 %}
+          <span class="year-rank rank-top3">Top 3 · Rank #{{ summary.season_rank }}</span>
+          {% else %}
+          <span class="year-rank rank-other">Rank #{{ summary.season_rank }}</span>
+          {% endif %}
+        {% endif %}
+        <span class="year-total">{{ summary.season_total|floatformat:2 }} pts</span>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>Finish</th>
+          <th>Score</th>
+          <th>KOs</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for gs in summary.scores %}
+        <tr{% if summary.year >= 2026 and forloop.counter <= 5 %} class="counting-row"{% endif %}>
+          <td>
+            <a class="month-link" href="{% url 'monthly_results' month=gs.game.month year=gs.game.year %}">
+              {{ gs.game.get_month_display }} {{ gs.game.year }}
+            </a>
+            {% if summary.year >= 2026 and forloop.counter <= 5 %}<span class="counting-dot" title="Counts toward top 5"></span>{% endif %}
+          </td>
+          <td>
+            <span class="rank-num">{{ gs.rank }}</span>
+            {% if gs.rank == 1 %}<span class="medal">🥇</span>
+            {% elif gs.rank == 2 %}<span class="medal">🥈</span>
+            {% elif gs.rank == 3 %}<span class="medal">🥉</span>
+            {% endif %}
+          </td>
+          <td><span class="points-val">{{ gs.score|floatformat:2 }}</span></td>
+          <td>
+            {% if gs.knockouts > 0 %}<span class="ko-val">💀 {{ gs.knockouts }}</span>
+            {% else %}<span class="ko-zero">—</span>{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% empty %}
+  <div style="text-align:center;padding:60px 20px;color:rgba(245,234,216,0.3);font-size:13px;letter-spacing:2px;">
+    NO TOURNAMENT DATA FOUND FOR THIS PLAYER
+  </div>
+  {% endfor %}
+
+</main>
+
+<footer>♠ {{ league_name }} · Player Profile ♠</footer>
+
+<script>
+const summaries = [
+  {% for s in year_summaries reversed %}
+  { year: {{ s.year }}, total: {{ s.season_total }} },
+  {% endfor %}
+];
+
+if (summaries.length > 0) {
+  const ctx = document.getElementById('trendChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: summaries.map(s => s.year),
+      datasets: [{
+        label: 'Season Total',
+        data: summaries.map(s => s.total),
+        borderColor: '#c9a84c',
+        backgroundColor: 'rgba(201,168,76,0.08)',
+        pointBackgroundColor: '#e8c96d',
+        pointBorderColor: '#c9a84c',
+        pointRadius: 5,
+        pointHoverRadius: 7,
+        borderWidth: 2,
+        fill: true,
+        tension: 0.3,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#111f16',
+          borderColor: '#c9a84c',
+          borderWidth: 1,
+          titleColor: '#e8c96d',
+          bodyColor: '#f5ead8',
+          callbacks: {
+            label: ctx => ` ${ctx.parsed.y.toFixed(2)} pts`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: 'rgba(245,234,216,0.4)', font: { family: 'IBM Plex Mono', size: 11 } },
+          grid: { color: 'rgba(201,168,76,0.08)' }
+        },
+        y: {
+          ticks: { color: 'rgba(245,234,216,0.4)', font: { family: 'IBM Plex Mono', size: 11 } },
+          grid: { color: 'rgba(201,168,76,0.08)' }
+        }
+      }
+    }
+  });
+}
+</script>
+
+</body>
+</html>
