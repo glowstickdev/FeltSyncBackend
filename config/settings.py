@@ -140,3 +140,6 @@ LEAGUE_TIMEZONE = config('LEAGUE_TIMEZONE', default='America/Phoenix')
 KNOCKOUT_START_MONTH = config('KNOCKOUT_START_MONTH', default=4, cast=int)
 SCORING_TOP_N = config('SCORING_TOP_N', default=5, cast=int)
 SCORING_TOP_N_FROM_YEAR = config('SCORING_TOP_N_FROM_YEAR', default=2026, cast=int)
+
+# OAuth client IDs (web, iOS, Android) whose Google tokens may sign in. Comma-separated.
+GOOGLE_CLIENT_IDS = [c.strip() for c in config('GOOGLE_CLIENT_IDS', default='').split(',') if c.strip()]

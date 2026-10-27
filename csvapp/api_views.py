@@ -10,6 +10,7 @@ FK related_name corrections vs. setup doc defaults:
 
 import calendar
 import json
+import logging
 from decimal import Decimal
 from datetime import datetime
 
@@ -50,6 +51,8 @@ from .serializers import (
     PlayerSeasonSummarySerializer,
     PushTokenSerializer,
 )
+
+logger = logging.getLogger(__name__)
 
 
 # ─── Scoring helpers ──────────────────────────────────────────────────────────
@@ -397,6 +400,11 @@ class HeadToHeadView(APIView):
 
 
 class EventListView(APIView):
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsAuthenticated(), IsAdminUser()]
+        return super().get_permissions()
+
     def get(self, request):
         events = (
             PokerEvent.objects
@@ -406,14 +414,10 @@ class EventListView(APIView):
         return Response(PokerEventSerializer(events, many=True, context={'request': request}).data)
 
     def post(self, request):
-        if not request.user.is_staff:
-            return Response({'detail': 'Staff only.'}, status=status.HTTP_403_FORBIDDEN)
-        fields = ['title', 'event_date', 'end_time', 'location', 'description']
-        data = {f: request.data[f] for f in fields if f in request.data}
-        if 'title' not in data or 'event_date' not in data:
-            return Response({'detail': 'title and event_date are required.'}, status=status.HTTP_400_BAD_REQUEST)
-        event = PokerEvent.objects.create(**data)
-        return Response(PokerEventSerializer(event).data, status=status.HTTP_201_CREATED)
+        serializer = PokerEventSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        event = serializer.save()
+        return Response(PokerEventSerializer(event, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
 class EventDetailView(APIView):
@@ -429,12 +433,10 @@ class EventDetailView(APIView):
         event = self._get_event(pk)
         if event is None:
             return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-        fields = ['title', 'event_date', 'end_time', 'location', 'description']
-        for f in fields:
-            if f in request.data:
-                setattr(event, f, request.data[f])
-        event.save()
-        return Response(PokerEventSerializer(event).data)
+        serializer = PokerEventSerializer(event, data=request.data, partial=True, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        event = serializer.save()
+        return Response(PokerEventSerializer(event, context={'request': request}).data)
 
     def delete(self, request, pk):
         event = self._get_event(pk)
@@ -672,17 +674,36 @@ class GoogleAuthView(APIView):
         if not access_token:
             return Response({'detail': 'access_token required.'}, status=400)
 
-        # Verify token + get user info from Google
+        # Confirm the token was issued to one of our OAuth clients — userinfo
+        # alone accepts any app's token that carries the email scope.
+        allowed_client_ids = django_settings.GOOGLE_CLIENT_IDS
+        if not allowed_client_ids:
+            logger.error('GOOGLE_CLIENT_IDS is not set; rejecting Google sign-in.')
+            return Response({'detail': 'Google sign-in is not configured.'}, status=503)
+
+        resp = http_requests.get(
+            'https://oauth2.googleapis.com/tokeninfo',
+            params={'access_token': access_token},
+            timeout=5,
+        )
+        if resp.status_code != 200:
+            return Response({'detail': 'Invalid Google token.'}, status=401)
+        tokeninfo = resp.json()
+        if tokeninfo.get('aud') not in allowed_client_ids and tokeninfo.get('azp') not in allowed_client_ids:
+            return Response({'detail': 'Invalid Google token.'}, status=401)
+        if str(tokeninfo.get('email_verified')).lower() != 'true':
+            return Response({'detail': 'Google account email is not verified.'}, status=401)
+
+        # Name comes from userinfo; the email is taken from the verified tokeninfo
         resp = http_requests.get(
             'https://www.googleapis.com/oauth2/v3/userinfo',
             headers={'Authorization': f'Bearer {access_token}'},
             timeout=5,
         )
-        if resp.status_code != 200:
+        userinfo = resp.json() if resp.status_code == 200 else {}
+        email = tokeninfo.get('email', '').lower()
+        if not email:
             return Response({'detail': 'Invalid Google token.'}, status=401)
-
-        userinfo = resp.json()
-        email = userinfo.get('email', '').lower()
 
         first_name = userinfo.get('given_name', '')
         last_name = userinfo.get('family_name', '')
@@ -855,7 +876,6 @@ class AppleAuthView(APIView):
 
     def post(self, request):
         identity_token = request.data.get('identity_token')
-        client_email = request.data.get('email')
 
         if not identity_token:
             return Response({'detail': 'identity_token is required.'}, status=400)
@@ -871,14 +891,30 @@ class AppleAuthView(APIView):
         except Exception:
             return Response({'detail': 'Invalid Apple identity token.'}, status=400)
 
-        email = (claims.get('email') or client_email or '').lower().strip()
-        if not email:
-            return Response({'detail': 'Email unavailable. Sign out on your device and try again.'}, status=400)
+        # Only trust identity data from the verified token. Returning users are
+        # matched on Apple's stable `sub`; the email claim is the fallback for
+        # accounts that haven't been linked yet.
+        apple_sub = claims.get('sub')
+        if not apple_sub:
+            return Response({'detail': 'Invalid Apple identity token.'}, status=400)
 
-        user, created = User.objects.get_or_create(
-            username__iexact=email,
-            defaults={'username': email, 'email': email},
-        )
+        profile = UserProfile.objects.select_related('user').filter(apple_sub=apple_sub).first()
+        if profile:
+            user, created = profile.user, False
+        else:
+            email = (claims.get('email') or '').lower().strip()
+            if not email:
+                return Response({'detail': 'Email unavailable. Sign out on your device and try again.'}, status=400)
+            user, created = User.objects.get_or_create(
+                username__iexact=email,
+                defaults={'username': email, 'email': email},
+            )
+            profile, _ = UserProfile.objects.get_or_create(user=user)
+            if profile.apple_sub and profile.apple_sub != apple_sub:
+                return Response({'detail': 'This email is linked to a different Apple ID.'}, status=400)
+            profile.apple_sub = apple_sub
+            profile.save(update_fields=['apple_sub'])
+        email = (user.email or user.username).lower()
 
         name = (request.data.get('name') or '').strip()
         parts = name.split(' ', 1) if name else []

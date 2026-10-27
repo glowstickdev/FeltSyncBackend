@@ -36,6 +36,7 @@ services:
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
       LEAGUE_NAME: ${LEAGUE_NAME:-My Poker League}
       LEAGUE_TIMEZONE: ${LEAGUE_TIMEZONE:-America/Chicago}
+      GOOGLE_CLIENT_IDS: ${GOOGLE_CLIENT_IDS:-}
     ports:
       - "80:8000"
     volumes:
@@ -46,7 +47,6 @@ services:
       - -c
       - |
         python manage.py collectstatic --noinput &&
-        python manage.py makemigrations csvapp &&
         python manage.py migrate &&
         gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 2 --threads 4 --timeout 120 --access-logfile - --error-logfile -
 
