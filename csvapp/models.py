@@ -260,6 +260,10 @@ class UserProfile(models.Model):
         default=False,
         help_text='Receives push notifications sent to the internal-tester audience.',
     )
+    apple_sub = models.CharField(
+        max_length=255, unique=True, null=True, blank=True,
+        help_text="Apple's stable user ID, linked on first Sign in with Apple.",
+    )
 
     def __str__(self):
         return f"Profile({self.user})"

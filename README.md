@@ -87,7 +87,7 @@ Edit `.env` and fill in every value. At minimum:
 docker compose up -d
 ```
 
-The container automatically runs `collectstatic`, `makemigrations`, and `migrate` on startup. No manual migration step needed.
+The container automatically runs `collectstatic` and `migrate` on startup. It does not run `makemigrations`: create migrations on dev, review them, and commit them with the model change.
 
 ### 3. Create a superuser
 
@@ -154,6 +154,7 @@ The upload interface validates file structure before committing. An existing mon
 | `CSRF_TRUSTED_ORIGINS` | Comma-separated trusted origins for CSRF | `https://yourdomain.com` |
 | `LEAGUE_NAME` | League display name, shown in all web UI | `My Poker League` |
 | `LEAGUE_TIMEZONE` | IANA timezone for your league | `America/Chicago` |
+| `GOOGLE_CLIENT_IDS` | Comma-separated Google OAuth client IDs (web, iOS, Android) allowed to sign in. Google sign-in is refused when empty | `123-abc.apps.googleusercontent.com,...` |
 | `GUNICORN_WORKERS` | Gunicorn worker processes (default: 2) | `2` |
 | `GUNICORN_THREADS` | Gunicorn threads per worker (default: 4) | `4` |
 
